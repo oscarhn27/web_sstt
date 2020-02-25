@@ -49,7 +49,7 @@ void mensajeDeError(int code_error, int socket_fd){
 		default:
 			return;
 	} 
-	
+	write(socket_fd, msg, strlen(msg));
 }
 
 void debug(int log_message_type, char *message, char *additional_info, int socket_fd)
@@ -67,7 +67,6 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			break;
 		case NOENCONTRADO:
 			// Enviar como respuesta 404 Not Found
-			write(socket_fd, msg_NOTFOUND, strlen(msg_NOTFOUND));
 			mensajeDeError(404, socket_fd);
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
