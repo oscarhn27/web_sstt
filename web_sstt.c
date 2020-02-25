@@ -12,11 +12,11 @@
 
 #include <sys/stat.h>
 
-#define VERSION		24
-#define BUFSIZE		8096
-#define ERROR		42
-#define LOG		44
-#define PROHIBIDO	403
+#define VERSION			24
+#define BUFSIZE			8096
+#define ERROR			42
+#define LOG				44
+#define PROHIBIDO		403
 #define NOENCONTRADO	404
 #define SPECIAL_CHAR	'$'
 
@@ -36,22 +36,39 @@ struct {
 	{"html","text/html" },
 	{0,0} };
 
+void mensajeDeError(int code_error, int socket_fd){
+
+	char * msg;
+	switch(code_error){
+		case 403:
+			msg = "HTTP/1.1 403 Forbidden\r\n";
+			break;
+		case 404:
+			msg = "HTTP/1.1 404 Not Found\r\n";
+			break;
+		default:
+			return;
+	} 
+	
+}
+
 void debug(int log_message_type, char *message, char *additional_info, int socket_fd)
 {
 	int fd ;
 	char logbuffer[BUFSIZE*2];
-	char * msg_NOTFOUND = "HTTP/1.1 404 Not Found\r\n\r\n";
 	
 	switch (log_message_type) {
 		case ERROR: (void)sprintf(logbuffer,"ERROR: %s:%s Errno=%d exiting pid=%d",message, additional_info, errno,getpid());
 			break;
 		case PROHIBIDO:
 			// Enviar como respuesta 403 Forbidden
+			mensajeDeError(403, socket_fd);
 			(void)sprintf(logbuffer,"FORBIDDEN: %s:%s",message, additional_info);
 			break;
 		case NOENCONTRADO:
 			// Enviar como respuesta 404 Not Found
 			write(socket_fd, msg_NOTFOUND, strlen(msg_NOTFOUND));
+			mensajeDeError(404, socket_fd);
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
@@ -162,7 +179,6 @@ void process_web_request(int descriptorFichero)
 		printf("Error el fichero solicitado %s no tiene permisos para get\n", path);
 		break;
 	}
-	// printf("Usuario propietario del ficher(UID): %u\n", fich.st_uid);
 	
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
