@@ -105,13 +105,12 @@ int protocoloValido(char * protocolo){
 	return 0;
 }
 
-char * obtenerHeaderDate(){
+void obtenerHeaderDate(char * date){
 	char buf[1000], date[1000];
 	time_t now = time(0);
 	struct tm tm = *gmtime(&now);
 	strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
 	sprintf(date, "Date: %s\r\n", buf);
-	return date;
 }
 
 void process_web_request(int descriptorFichero)
@@ -217,10 +216,11 @@ void process_web_request(int descriptorFichero)
 	*/
 
 	char * ok = "HTTP/1.1 200 OK\r\n";
-	char * date = obtenerHeaderDate();
+	char * date;
+	obtenerHeaderDate(date);
 	char * cType = "Content-type: text/html; charset=UTF-8\r\n";
 	char * cLength;
-	sprintf(cLength,"Content-length: %d\r\n", fich.st_size);
+	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
 	int fd_index = open(path, O_RDONLY);
 	char html [BUFSIZE];
 	read(fd_index, html, BUFSIZE);
