@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 
 #include <sys/stat.h>
+#include <time.h>
 
 #define VERSION			24
 #define BUFSIZE			8096
@@ -82,12 +83,9 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 }
 
 int directorioIlegal(char * directorio){
-	for(int i = 0; i < strlen(directorio)-1; i++){
-		if(directorio[i] == '.' && directorio[i+1] == '.'){
-			fprintf(stderr, "El directorio %s es invalido ya que intenta acceder a otro directorios\n", directorio);
+	for(int i = 0; i < strlen(directorio)-1; i++)
+		if(directorio[i] == '.' && directorio[i+1] == '.')
 			return 1;
-		}
-	}
 	return 0;
 }
 
@@ -105,6 +103,15 @@ int protocoloValido(char * protocolo){
 		return 1;
 	}
 	return 0;
+}
+
+char * obtenerHeaderDate(){
+	char buf[1000], date[1000];
+	time_t now = time(0);
+	struct tm tm = *gmtime(&now);
+	strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	sprintf(date, "Date: %s\r\n", buf);
+	return date;
 }
 
 void process_web_request(int descriptorFichero)
@@ -156,8 +163,6 @@ void process_web_request(int descriptorFichero)
 	//
 	
 	char * path = strtok(NULL, " ");
-	if(directorioIlegal(path))
-		break;
 	struct stat fich; // Información del fichero
 	int exist; // Si es igual a -1 el fichero no existe
 	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
@@ -174,7 +179,8 @@ void process_web_request(int descriptorFichero)
 		printf("Error el fichero %s no existe\n", path);
 		break;
 	}
-	else if(fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+	else if(directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero)
 		printf("Error el fichero solicitado %s no tiene permisos para get\n", path);
 		break;
 	}
@@ -191,10 +197,7 @@ void process_web_request(int descriptorFichero)
 	//	Como se trata el caso excepcional de la URL que no apunta a ningún fichero
 	//	html
 	//
-	
-	// int lRequest = sprintf(request, "HTTP/1.1 404 Not Found\r\nHost: Content-Type: text/html\r\nStatus: 404 Not Found\r\n\r\n");
-	// write(descriptorFichero, request, lRequest);
-	
+
 	//
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
@@ -213,8 +216,21 @@ void process_web_request(int descriptorFichero)
 	write(descriptorFichero, request, strlen(request));
 	printf("hola%d%s",(int) strlen(request), request);
 	*/
-	char * ok = "HTTP/1.1 200 OK\r\n\r\n";
-	write(descriptorFichero, ok, strlen(ok));
+
+	char * ok = "HTTP/1.1 200 OK\r\n";
+	char * date = obtenerHeaderDate();
+	char * cType = "Content-type: text/html; charset=UTF-8\r\n"
+	char * cLength;
+	sprintf(cLength,"Content-length: %d\r\n", fich.st_size);
+	int fd_index = open(path, O_RDONLY);
+	char html [BUFSIZE];
+	read(fd_index, html, BUFSIZE);
+
+	char request [BUFSIZE+strlen(ok)+strlen(date)+strlen(cType)+strlen(cLength)];
+	sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, html);
+	write(descriptorFichero, request, strlen(request));
+
+
 	// Persistencia
 	fd_set setFd;
 	FD_ZERO(&setFd);
