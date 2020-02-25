@@ -125,7 +125,6 @@ void process_web_request(int descriptorFichero)
 	char buf[BUFSIZE];
 	char * token;
 	char * subtoken;
-	char * request;
 	//
 	// Leer la petición HTTP y comprobación de errores de lectura
 	//
