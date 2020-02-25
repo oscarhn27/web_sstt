@@ -223,7 +223,7 @@ void process_web_request(int descriptorFichero)
 	char * date;
 	obtenerHeaderDate(date);
 	char * cType = "Content-type: text/html; charset=UTF-8\r\n";
-	char * cLength;
+	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
 	int fd_index = open(path, O_RDONLY);
 	char html [BUFSIZE];
