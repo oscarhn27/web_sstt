@@ -180,7 +180,7 @@ void process_web_request(int descriptorFichero)
 		break;
 	}
 	else if(directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
-		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero)
+		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
 		printf("Error el fichero solicitado %s no tiene permisos para get\n", path);
 		break;
 	}
@@ -219,7 +219,7 @@ void process_web_request(int descriptorFichero)
 
 	char * ok = "HTTP/1.1 200 OK\r\n";
 	char * date = obtenerHeaderDate();
-	char * cType = "Content-type: text/html; charset=UTF-8\r\n"
+	char * cType = "Content-type: text/html; charset=UTF-8\r\n";
 	char * cLength;
 	sprintf(cLength,"Content-length: %d\r\n", fich.st_size);
 	int fd_index = open(path, O_RDONLY);
