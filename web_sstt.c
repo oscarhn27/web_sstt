@@ -151,8 +151,10 @@ void process_web_request(int descriptorFichero)
 	
 	token = strtok(buf, "$$");
 	char * metodo = strtok(token, " ");
-	if(comprobarMetodo(metodo))
+	if(comprobarMetodo(metodo)){
+		debug(ERROR, "Metodo no soportado.", metodo, descriptorFichero);
 		break;
+	}
 	
 	//
 	//	Como se trata el caso de acceso ilegal a directorios superiores de la
@@ -188,8 +190,10 @@ void process_web_request(int descriptorFichero)
 	//
 	
 	char * protocolo = strtok(NULL, " ");
-	if(protocoloValido(protocolo))
+	if(protocoloValido(protocolo)){
+		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
 		break;
+	}
 	
 	//
 	//	Como se trata el caso excepcional de la URL que no apunta a ningún fichero
