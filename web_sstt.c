@@ -205,6 +205,19 @@ void process_web_request(int descriptorFichero)
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
 	//
 	
+	char * extension = strrchr(path, '.') + 1;
+	if(extension == NULL){
+		debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
+		break;
+	}
+	else{
+		int i;
+		for(i = 0; extensions[i].ext != 0 && strcmp(extensions[i].ext, extension); i++);
+		if(extensions[i].ext == 0){
+			debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
+			break;
+		}
+	}
 	
 	//
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
