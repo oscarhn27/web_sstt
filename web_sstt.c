@@ -206,6 +206,7 @@ void process_web_request(int descriptorFichero)
 	//
 	
 	char * extension = strrchr(path, '.') + 1;
+	int nExtension; // Numero de la extension
 	if(extension == NULL){
 		debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
 		break;
@@ -217,6 +218,7 @@ void process_web_request(int descriptorFichero)
 			debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
 			break;
 		}
+		nExtension = i;
 	}
 	
 	//
@@ -235,7 +237,8 @@ void process_web_request(int descriptorFichero)
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	char date[1000];
 	obtenerHeaderDate(date);
-	char cType[1000] = "Content-type: text/html; charset=UTF-8\r\n";
+	char cType[1000];
+	sprintf(cType, "Content-type: %s\r\n", extensions[nExtension].filetype);
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
 	int fd_index = open(path, O_RDONLY);
