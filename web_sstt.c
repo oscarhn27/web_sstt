@@ -226,14 +226,6 @@ void process_web_request(int descriptorFichero)
 	//	correspondiente, y el envio del fichero se hace en bloques de un máximo de  8kB
 	//
 
-	/*int fd_index = open("index.html", O_RDONLY);
-	char html[BUFSIZE];
-	read(fd_index, html, BUFSIZE);
-	sprintf(request, "HTTP/1.1 200 OK\r\n\r\n%s", html);
-	write(descriptorFichero, request, strlen(request));
-	printf("hola%d%s",(int) strlen(request), request);
-	*/
-
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	char date[1000];
 	obtenerHeaderDate(date);
@@ -241,15 +233,20 @@ void process_web_request(int descriptorFichero)
 	sprintf(cType, "Content-type: %s\r\n", extensions[nExtension].filetype);
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
-	int fd_index = open(path, O_RDONLY);
-	char html [BUFSIZE];
-	read(fd_index, html, BUFSIZE);
+	int fd_file = open(path, O_RDONLY);
+	char fileSend [BUFSIZE];
+	read(fd_file, fileSend, BUFSIZE);
 
 	char request [BUFSIZE+strlen(ok)+strlen(date)+strlen(cType)+strlen(cLength)];
-	sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, html);
-	write(descriptorFichero, request, strlen(request));
-
-
+	sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, fileSend);
+	int escrito = write(descriptorFichero, request, strlen(request));
+	int tamanoRestante = fich.st_size - escrito;
+	while(tamanoRestante > 0){
+		read(fd_file, fileSend, BUFSIZE);
+		tamanoRestante -= write(descriptorFichero, fileSend, strlen(fileSend));
+	}
+	close(fd_file);
+	
 	// Persistencia
 	fd_set setFd;
 	FD_ZERO(&setFd);
