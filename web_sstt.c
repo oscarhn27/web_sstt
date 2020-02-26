@@ -219,10 +219,10 @@ void process_web_request(int descriptorFichero)
 	printf("hola%d%s",(int) strlen(request), request);
 	*/
 
-	char * ok = "HTTP/1.1 200 OK\r\n";
-	char * date;
+	char ok[1000] = "HTTP/1.1 200 OK\r\n";
+	char date[1000];
 	obtenerHeaderDate(date);
-	char * cType = "Content-type: text/html; charset=UTF-8\r\n";
+	char cType[1000] = "Content-type: text/html; charset=UTF-8\r\n";
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
 	int fd_index = open(path, O_RDONLY);
