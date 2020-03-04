@@ -37,6 +37,44 @@ struct {
 	{"html","text/html" },
 	{0,0} };
 
+int getFileType(char * ext){
+	int nExtension;
+	if(ext == NULL){
+		// debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
+		return -1;
+	}
+	else{
+		int i;
+		for(i = 0; extensions[i].ext != 0 && strcmp(extensions[i].ext, ext); i++);
+		if(extensions[i].ext == 0){
+			// debug(ERROR, "Archivo con extension no soportado", ext, descriptorFichero);
+			return -2;
+		}	
+		return i;
+	}
+}
+
+void obtenerHeaderDate(char * date){
+	char buf[1000];
+	time_t now = time(0);
+	struct tm tm = *gmtime(&now);
+	strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
+	sprintf(date, "Date: %s\r\n", buf);
+}
+
+void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
+	char date[1000];
+	obtenerHeaderDate(date);
+	char cType[1000];
+	sprintf(cType, "Content-type: %s\r\n", extensions[size].filetype);
+	char cLength [1000];
+	sprintf(cLength,"Content-length: %ld\r\n", size);
+	char * headers = malloc(sizeof(char) * (strlen(msgType) + strlen(date) + strlen(cType) + strlen(cLength)));
+	sprintf(headers, "%s%s%s%s", msgType, date, cType, cLength);
+	write(socket_fd, headers, strlen(headers));
+	free(headers);
+}
+
 void mensajeDeError(int code_error, int socket_fd){
 
 	char * msg;
@@ -103,14 +141,6 @@ int protocoloValido(char * protocolo){
 		return 1;
 	}
 	return 0;
-}
-
-void obtenerHeaderDate(char * date){
-	char buf[1000];
-	time_t now = time(0);
-	struct tm tm = *gmtime(&now);
-	strftime(buf, sizeof buf, "%a, %d %b %Y %H:%M:%S %Z", &tm);
-	sprintf(date, "Date: %s\r\n", buf);
 }
 
 void process_web_request(int descriptorFichero)
@@ -225,20 +255,20 @@ void process_web_request(int descriptorFichero)
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 	//	correspondiente, y el envio del fichero se hace en bloques de un máximo de  8kB
 	//
-
+/*
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	char date[1000];
 	obtenerHeaderDate(date);
 	char cType[1000];
 	sprintf(cType, "Content-type: %s\r\n", extensions[nExtension].filetype);
 	char cLength [1000];
-	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);
+	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);*/
 	int fd_file = open(path, O_RDONLY);
 	char fileSend [BUFSIZE];
 	read(fd_file, fileSend, BUFSIZE);
 
-	char request [BUFSIZE+strlen(ok)+strlen(date)+strlen(cType)+strlen(cLength)];
-	sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, fileSend);
+	// char request [BUFSIZE+strlen(ok)+strlen(date)+strlen(cType)+strlen(cLength)];
+	// sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, fileSend);
 	int escrito = write(descriptorFichero, request, strlen(request));
 	int tamanoRestante = fich.st_size - escrito;
 	while(tamanoRestante > 0){
