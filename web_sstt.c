@@ -40,14 +40,12 @@ struct {
 int getFileType(char * ext){
 	int nExtension;
 	if(ext == NULL){
-		// debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
 		return -1;
 	}
 	else{
 		int i;
 		for(i = 0; extensions[i].ext != 0 && strcmp(extensions[i].ext, ext); i++);
 		if(extensions[i].ext == 0){
-			// debug(ERROR, "Archivo con extension no soportado", ext, descriptorFichero);
 			return -2;
 		}	
 		return i;
@@ -237,46 +235,47 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	if(extension == NULL){
-		debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
-		break;
-	}
-	else{
-		int i;
-		for(i = 0; extensions[i].ext != 0 && strcmp(extensions[i].ext, extension); i++);
-		if(extensions[i].ext == 0){
-			debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
-			break;
+	if(nExtension = getFileType(extension) < 0){
+		switch(nExtension){
+			case -1 : 
+				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
+				break;
+			case -2 :
+				debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
+				break;
 		}
-		nExtension = i;
+		break;
 	}
 	
 	//
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 	//	correspondiente, y el envio del fichero se hace en bloques de un máximo de  8kB
 	//
-/*
-	char ok[1000] = "HTTP/1.1 200 OK\r\n";
-	char date[1000];
-	obtenerHeaderDate(date);
-	char cType[1000];
-	sprintf(cType, "Content-type: %s\r\n", extensions[nExtension].filetype);
-	char cLength [1000];
-	sprintf(cLength,"Content-length: %ld\r\n", fich.st_size);*/
-	int fd_file = open(path, O_RDONLY);
-	char fileSend [BUFSIZE];
-	read(fd_file, fileSend, BUFSIZE);
 
-	// char request [BUFSIZE+strlen(ok)+strlen(date)+strlen(cType)+strlen(cLength)];
-	// sprintf(request, "%s%s%s%s\r\n%s\r\n\r\n", ok, date, cType, cLength, fileSend);
-	int escrito = write(descriptorFichero, request, strlen(request));
-	int tamanoRestante = fich.st_size - escrito;
-	while(tamanoRestante > 0){
+	char ok[1000] = "HTTP/1.1 200 OK\r\n";
+	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
+
+	char * fileSend = malloc(sizeof(char) * BUFSIZE);
+	int fd_file = open(path, O_RDONLY);
+
+	long int tamanoRestante = fich.st_size;
+	do{
 		read(fd_file, fileSend, BUFSIZE);
-		tamanoRestante -= write(descriptorFichero, fileSend, strlen(fileSend));
-	}
+
+		int offset = 0, len = strlen(fileSend);
+		while ((offset += write(descriptorFichero, fileSend+offset, len)) != len){
+            len -= offset;
+            if(offset < 0){
+                debug(ERROR, "Error en la escritura", "write file", descriptorFichero);
+                exit(EXIT_FAILURE);
+            }
+        }
+        tamanoRestante -= offset;
+	}while(tamanoRestante > 0);
 	close(fd_file);
-	
+	free(fileSend);
+
+
 	// Persistencia
 	fd_set setFd;
 	FD_ZERO(&setFd);
