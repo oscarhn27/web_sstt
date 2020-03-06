@@ -217,8 +217,10 @@ void process_web_request(int descriptorFichero)
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
 	
+	printf("Llega al protocolo\n");
+
 	char * protocolo = strtok(NULL, " ");
-	if(protocoloValido(protocolo)){
+	if(protocoloValido(protocolo) > 0){
 		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
 		break;
 	}
@@ -232,6 +234,7 @@ void process_web_request(int descriptorFichero)
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
 	//
+	printf("Llega a la extension");
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
@@ -251,6 +254,8 @@ void process_web_request(int descriptorFichero)
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 	//	correspondiente, y el envio del fichero se hace en bloques de un máximo de  8kB
 	//
+	
+	printf("Llega al ok");
 
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
