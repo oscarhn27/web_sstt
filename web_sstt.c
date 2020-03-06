@@ -135,7 +135,7 @@ int comprobarMetodo(char * metodo){
 
 int protocoloValido(char * protocolo){
 	if(strcmp(protocolo, "HTTP/1.1")){
-		fprintf(stderr, "El protocolo %s solicitado es distinto de HTTP/1.1\n", protocolo);
+		printf("El protocolo %s solicitado es distinto de HTTP/1.1\n", protocolo);
 		return 1;
 	}
 	return 0;
