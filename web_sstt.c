@@ -134,10 +134,12 @@ int comprobarMetodo(char * metodo){
 }
 
 int protocoloValido(char * protocolo){
-	if(strcmp(protocolo, "HTTP/1.1") != 0){
-		printf("El protocolo %s solicitado es distinto de HTTP/1.1\n", protocolo);
+	if(strcmp(protocolo, "HTTP/1.1")){
+		printf("Pasa el cmp 1\n");
+		fprintf(stderr, "El protocolo %s solicitado es distinto de HTTP/1.1\n", protocolo);
 		return 1;
 	}
+	printf("Pasa el cmp 2\n");
 	return 0;
 }
 
@@ -221,7 +223,7 @@ void process_web_request(int descriptorFichero)
 	protocolo = strtok(NULL, " ");
 	printf("Llega al protocolo %s\n", protocolo);
 
-	if(protocoloValido(protocolo) > 0){
+	if(protocoloValido(protocolo)){
 		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
 		break;
 	}
