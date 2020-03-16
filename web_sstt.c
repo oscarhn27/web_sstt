@@ -158,7 +158,7 @@ void process_web_request(int descriptorFichero)
 	// Leer la petición HTTP y comprobación de errores de lectura
 	//
 	
-	if(read(descriptorFichero, buf, BUFSIZE));
+	read(descriptorFichero, buf, BUFSIZE);
 	
 	//
 	// Si la lectura tiene datos válidos terminar el buffer con un \0
@@ -223,7 +223,7 @@ void process_web_request(int descriptorFichero)
 	protocolo = strtok(NULL, " ");
 	printf("Llega al protocolo %s\n", protocolo);
 
-	if(protocoloValido(protocolo)){
+	if(protocoloValido(protocolo) != 0){
 		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
 		break;
 	}
