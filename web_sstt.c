@@ -228,7 +228,7 @@ void process_web_request(int descriptorFichero)
 		break;
 	}
 	
-	//
+	/*
 	//	Como se trata el caso excepcional de la URL que no apunta a ningún fichero
 	//	html
 	//
@@ -236,8 +236,8 @@ void process_web_request(int descriptorFichero)
 	//
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
-	//
-	printf("Llega a la extension");
+	*/
+	printf("Llega a la extension\n");
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
