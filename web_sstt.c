@@ -234,10 +234,10 @@ void process_web_request(int descriptorFichero)
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
 	*/
-	printf("Llega a la extension\n");
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
+	printf("Llega a la extension\n");
 	if(nExtension = getFileType(extension) < 0){
 		/*switch(nExtension){
 			case -1 : 
