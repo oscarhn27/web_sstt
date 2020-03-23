@@ -193,12 +193,11 @@ void process_web_request(int descriptorFichero)
 	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
 	if(path[strlen(path)-1]=='/'){
 		char pathCompleto[64];
-		sprintf(pathCompleto, "%sindex.html", path+1);
-		exist = stat(pathCompleto, &fich);
+		sprintf(pathCompleto, "%sindex.html", path);
 		path = pathCompleto;
 	}
-	else
-		exist = stat(path+1, &fich);
+	path = path + 1;
+	exist = stat(path, &fich);
 	if(exist == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
 		printf("Error el fichero %s no existe\n", path);
