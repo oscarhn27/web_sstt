@@ -122,12 +122,15 @@ int directorioIlegal(char * directorio){
 	return 0;
 }
 
+// Devuelve 1 si es POST y 2 si es GET
 int comprobarMetodo(char * metodo){
 	if(strcmp(metodo, "GET") && strcmp(metodo, "POST")){
 		fprintf(stderr, "El metodo solicitado %s es distinto de GET y POST\n", metodo);
 		return -1;
 	}
-	return 0;
+	if(strcmp(metodo, "GET"))
+		return 1;
+	return 2;
 }
 
 int protocoloValido(char * protocolo){
@@ -182,10 +185,35 @@ void process_web_request(int descriptorFichero)
 	
 	token = strtok(buf, "$$");
 	char * metodo = strtok(token, " ");
-	if(comprobarMetodo(metodo)){
+
+	int tipoMetodo;
+	if(tipoMetodo = comprobarMetodo(metodo)){
 		debug(ERROR, "Metodo no soportado.", metodo, descriptorFichero);
 		break;
 	}
+
+	char * path = strtok(NULL, " ");
+	char * protocolo = strtok(NULL, "$");
+
+	char * lineaHeader;
+	char lineaB[1000];
+	while((lineaHeader = strtok(NULL, "$")) != NULL){
+		strcpy(lineaB, lineaHeader);
+	}
+	if(tipoMetodo == 1){
+		strtok(lineaB, "=");
+		char * mail = strtok(NULL, " ");
+		printf("%s\n", mail);
+	}
+	
+
+
+
+
+
+
+
+	
 	
 	//
 	//	Como se trata el caso de acceso ilegal a directorios superiores de la
@@ -193,7 +221,7 @@ void process_web_request(int descriptorFichero)
 	//	del sistema
 	//
 	
-	char * path = strtok(NULL, " ");
+	
 	struct stat fich; // Información del fichero
 	int exist; // Si es igual a -1 el fichero no existe
 	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
@@ -219,8 +247,7 @@ void process_web_request(int descriptorFichero)
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
 	
-	char * protocolo;
-	protocolo = strtok(NULL, " ");
+	
 
 	if(protocoloValido(protocolo) != 0){
 		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
