@@ -235,9 +235,7 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	printf("Llega a la extension\n");
-	nExtension = getFileType(extension);
-	printf("%d\n", nExtension);/*{
+	nExtension = getFileType(extension);/*{
 		switch(nExtension){
 			case -1 : 
 				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
@@ -253,14 +251,13 @@ void process_web_request(int descriptorFichero)
 		correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
 	*/
 	
-	printf("Llega al ok");
 
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
+	printf("Llega al ok\n");
 
 	char * fileSend = malloc(sizeof(char) * BUFSIZE);
 	int fd_file = open(path, O_RDONLY);
-
 	long int tamanoRestante = fich.st_size;
 	do{
 		read(fd_file, fileSend, BUFSIZE);
