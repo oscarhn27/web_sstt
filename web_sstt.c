@@ -17,6 +17,7 @@
 #define BUFSIZE			8096
 #define ERROR			42
 #define LOG				44
+#define BADREQUEST		400
 #define PROHIBIDO		403
 #define NOENCONTRADO	404
 #define SPECIAL_CHAR	'$'
@@ -74,6 +75,9 @@ void mensajeDeError(int code_error, int socket_fd){
 
 	char * msg;
 	switch(code_error){
+		case 400:
+			msg = "HTTP/1.1 400 Bad request\r\n";
+			break;
 		case 403:
 			msg = "HTTP/1.1 403 Forbidden\r\n";
 			break;
@@ -104,6 +108,10 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			mensajeDeError(404, socket_fd);
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
+		case BADREQUEST:
+			// Enviar como respuesta 404 Not Found
+			mensajeDeError(400, socket_fd);
+			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
 	}
 
@@ -188,7 +196,7 @@ void process_web_request(int descriptorFichero)
 
 	int tipoMetodo;
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
-		debug(ERROR, "Metodo no soportado.", metodo, descriptorFichero);
+		debug(ERROR, "Metodo no soportado", metodo, descriptorFichero);
 		break;
 	}
 
@@ -198,6 +206,10 @@ void process_web_request(int descriptorFichero)
 	char * lineaHeader;
 	char lineaB[1000];
 	while((lineaHeader = strtok(NULL, "$")) != NULL){
+		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "mail=") == NULL){
+			debug(BADREQUEST, "Peticion mal formada", lineaHeader, descriptorFichero);
+			exit(EXIT_FAILURE);
+		}
 		strcpy(lineaB, lineaHeader);
 	}
 	if(tipoMetodo == 1){
@@ -208,11 +220,6 @@ void process_web_request(int descriptorFichero)
 		else
 			path = "/bueno.html";
 	}
-	
-
-
-
-
 
 
 
