@@ -59,16 +59,19 @@ void obtenerHeaderDate(char * date){
 }
 
 void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
+	printf("Llega a la func\n");
 	char date[1000];
 	obtenerHeaderDate(date);
+	printf("Llega a cType\n");
 	char cType[1000];
-	sprintf(cType, "Content-type: %s\r\n", extensions[size].filetype);
+	sprintf(cType, "Content-type: %s\r\n", fileType);
+	printf("Llega a cLength\n");
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
-	char * headers = malloc(sizeof(char) * (strlen(msgType) + strlen(date) + strlen(cType) + strlen(cLength) + 2));
+	char headers[8000];
 	sprintf(headers, "%s%s%s%s\r\n", msgType, date, cType, cLength);
+	printf("Llega a write\n");
 	write(socket_fd, headers, strlen(headers));
-	free(headers);
 }
 
 void mensajeDeError(int code_error, int socket_fd){
