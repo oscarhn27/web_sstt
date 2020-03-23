@@ -124,11 +124,11 @@ int directorioIlegal(char * directorio){
 
 // Devuelve 1 si es POST y 2 si es GET
 int comprobarMetodo(char * metodo){
-	if(strcmp(metodo, "GET") && strcmp(metodo, "POST")){
+	if((strcmp(metodo, "GET") != 0) && (strcmp(metodo, "POST") != 0)){
 		fprintf(stderr, "El metodo solicitado %s es distinto de GET y POST\n", metodo);
 		return -1;
 	}
-	if(strcmp(metodo, "GET"))
+	if(strcmp(metodo, "POST") == 0)
 		return 1;
 	return 2;
 }
@@ -183,11 +183,11 @@ void process_web_request(int descriptorFichero)
 	//	TRATAR LOS CASOS DE LOS DIFERENTES METODOS QUE SE USAN
 	//
 	
-	token = strtok(buf, "$$");
-	char * metodo = strtok(token, " ");
+	// token = strtok(buf, "$$");
+	char * metodo = strtok(buf, " ");
 
 	int tipoMetodo;
-	if(tipoMetodo = comprobarMetodo(metodo)){
+	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
 		debug(ERROR, "Metodo no soportado.", metodo, descriptorFichero);
 		break;
 	}
@@ -202,8 +202,11 @@ void process_web_request(int descriptorFichero)
 	}
 	if(tipoMetodo == 1){
 		strtok(lineaB, "=");
-		char * mail = strtok(NULL, " ");
-		printf("%s\n", mail);
+		char * mail = strtok(NULL, "$");
+		if(strcmp(mail, "oscar.hernandezn%40um.es") != 0)
+			path = "/malo.html";
+		else
+			path = "/bueno.html";
 	}
 	
 
@@ -289,7 +292,6 @@ void process_web_request(int descriptorFichero)
 fflush(stdout);
 
 	char fileSend [BUFSIZE];
-	printf("%s\n", path);
 	int fd_file = open(path, O_RDONLY);
 	size_t bytes_r; // Bytes leidos
 	do{
