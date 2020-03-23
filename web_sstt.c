@@ -38,18 +38,16 @@ struct {
 	{0,0} };
 
 int getFileType(char * ext){
-	int nExtension;
+	int nExtension, i;
 	if(ext == NULL){
 		return -1;
 	}
 	else{
-		int i;
 		for(i = 0; extensions[i].ext != 0 && strcmp(extensions[i].ext, ext); i++);
-		if(extensions[i].ext == 0){
+		if(extensions[i].ext == 0)
 			return -2;
-		}	
-		return i;
 	}
+	return i;
 }
 
 void obtenerHeaderDate(char * date){
@@ -238,8 +236,9 @@ void process_web_request(int descriptorFichero)
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
 	printf("Llega a la extension\n");
-	if(nExtension = getFileType(extension) < 0){
-		/*switch(nExtension){
+	nExtension = getFileType(extension);
+	printf("%d\n", nExtension);/*{
+		switch(nExtension){
 			case -1 : 
 				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
 				break;
@@ -247,12 +246,11 @@ void process_web_request(int descriptorFichero)
 				debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
 				break;
 		}
-		break;*/
-	}
-	
-	/*
-	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
-	//	correspondiente, y el envio del fichero se hace en bloques de un máximo de  8kB
+		break;
+
+
+		En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
+		correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
 	*/
 	
 	printf("Llega al ok");
