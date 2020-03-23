@@ -65,8 +65,8 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	sprintf(cType, "Content-type: %s\r\n", extensions[size].filetype);
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
-	char * headers = malloc(sizeof(char) * (strlen(msgType) + strlen(date) + strlen(cType) + strlen(cLength)));
-	sprintf(headers, "%s%s%s%s", msgType, date, cType, cLength);
+	char * headers = malloc(sizeof(char) * (strlen(msgType) + strlen(date) + strlen(cType) + strlen(cLength) + 2));
+	sprintf(headers, "%s%s%s%s\r\n", msgType, date, cType, cLength);
 	write(socket_fd, headers, strlen(headers));
 	free(headers);
 }
