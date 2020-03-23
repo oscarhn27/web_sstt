@@ -253,16 +253,20 @@ void process_web_request(int descriptorFichero)
 
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
-	printf("Llega al ok\n");
+
+fflush(stdout);
 
 	char fileSend [BUFSIZE];
+	printf("%s\n", path);
 	int fd_file = open(path, O_RDONLY);
 	size_t bytes_r; // Bytes leidos
 	do{
+		bytes_r = 0;
 		bytes_r = read(fd_file, fileSend, BUFSIZE);
+		// printf("Bytes leidos %lu\n", bytes_r);
 		int offset = 0;
-		while((offset += write(fd_file, fileSend+offset, bytes_r-offset)) != bytes_r ){
-			if(offset_W < 0){
+		while((offset += write(descriptorFichero, fileSend+offset, bytes_r-offset)) != bytes_r ){
+			if(offset < 0){
             	debug(ERROR, "Error en la escritura", "write file", descriptorFichero);
             	exit(EXIT_FAILURE);
         	}
@@ -276,7 +280,7 @@ void process_web_request(int descriptorFichero)
 	FD_ZERO(&setFd);
 	FD_SET(descriptorFichero, &setFd);
 	struct timeval timeWait;
-	timeWait.tv_sec = 45;
+	timeWait.tv_sec = 5;
 	retVal = select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait);
 	}while(retVal);
 	close(descriptorFichero);
