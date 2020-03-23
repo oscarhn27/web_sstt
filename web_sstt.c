@@ -255,24 +255,20 @@ void process_web_request(int descriptorFichero)
 	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
 	printf("Llega al ok\n");
 
-	char * fileSend = malloc(sizeof(char) * BUFSIZE);
+	char fileSend [BUFSIZE];
 	int fd_file = open(path, O_RDONLY);
-	long int tamanoRestante = fich.st_size;
+	size_t bytes_r; // Bytes leidos
 	do{
-		read(fd_file, fileSend, BUFSIZE);
-
-		int offset = 0, len = strlen(fileSend);
-		while ((offset += write(descriptorFichero, fileSend+offset, len)) != len){
-            len -= offset;
-            if(offset < 0){
-                debug(ERROR, "Error en la escritura", "write file", descriptorFichero);
-                exit(EXIT_FAILURE);
-            }
-        }
-        tamanoRestante -= offset;
-	}while(tamanoRestante > 0);
+		bytes_r = read(fd_file, fileSend, BUFSIZE);
+		int offset = 0;
+		while((offset += write(fd_file, fileSend+offset, bytes_r-offset)) != bytes_r ){
+			if(offset_W < 0){
+            	debug(ERROR, "Error en la escritura", "write file", descriptorFichero);
+            	exit(EXIT_FAILURE);
+        	}
+    	}
+	}while(bytes_r != 0);
 	close(fd_file);
-	free(fileSend);
 
 
 	// Persistencia
