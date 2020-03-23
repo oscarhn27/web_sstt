@@ -140,8 +140,15 @@ int protocoloValido(char * protocolo){
 
 void process_web_request(int descriptorFichero)
 {
-	int retVal;
+	// Persistencia
+	fd_set setFd;
+	FD_ZERO(&setFd);
+	FD_SET(descriptorFichero, &setFd);
+	struct timeval timeWait;
+	timeWait.tv_sec = 5;
+	timeWait.tv_usec = 0;
 	do{
+
 	debug(LOG,"request","Ha llegado una peticion",descriptorFichero);
 	//
 	// Definir buffer y variables necesarias para leer las peticiones
@@ -233,7 +240,7 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	nExtension = getFileType(extension);/*{
+	if(nExtension = getFileType(extension) < 0){
 		switch(nExtension){
 			case -1 : 
 				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
@@ -243,8 +250,8 @@ void process_web_request(int descriptorFichero)
 				break;
 		}
 		break;
-
-
+	}
+	/*
 		En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 		correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
 	*/
@@ -269,15 +276,7 @@ void process_web_request(int descriptorFichero)
 	}while(bytes_r != 0);
 	close(fd_file);
 
-
-	// Persistencia
-	fd_set setFd;
-	FD_ZERO(&setFd);
-	FD_SET(descriptorFichero, &setFd);
-	struct timeval timeWait;
-	timeWait.tv_sec = 45;
-	retVal = select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait);
-	}while(retVal);
+	}while(select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait));
 	close(descriptorFichero);
 	exit(1);
 }
