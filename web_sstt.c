@@ -123,9 +123,9 @@ int directorioIlegal(char * directorio){
 }
 
 int comprobarMetodo(char * metodo){
-	if(strcmp(metodo, "GET")){
-		fprintf(stderr, "El metodo solicitado %s es distinto de GET\n", metodo);
-		return 1;
+	if(strcmp(metodo, "GET") && strcmp(metodo, "POST")){
+		fprintf(stderr, "El metodo solicitado %s es distinto de GET y POST\n", metodo);
+		return -1;
 	}
 	return 0;
 }
@@ -178,7 +178,6 @@ void process_web_request(int descriptorFichero)
 	}
 	//
 	//	TRATAR LOS CASOS DE LOS DIFERENTES METODOS QUE SE USAN
-	//	(Se soporta solo GET)
 	//
 	
 	token = strtok(buf, "$$");
