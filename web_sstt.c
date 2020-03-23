@@ -76,13 +76,13 @@ void mensajeDeError(int code_error, int socket_fd){
 	char * msg;
 	switch(code_error){
 		case 400:
-			msg = "HTTP/1.1 400 Bad request\r\n";
+			msg = "HTTP/1.1 400 Bad request\r\n\r\n";
 			break;
 		case 403:
-			msg = "HTTP/1.1 403 Forbidden\r\n";
+			msg = "HTTP/1.1 403 Forbidden\r\n\r\n";
 			break;
 		case 404:
-			msg = "HTTP/1.1 404 Not Found\r\n";
+			msg = "HTTP/1.1 404 Not Found\r\n\r\n";
 			break;
 		default:
 			return;
@@ -109,7 +109,7 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
 		case BADREQUEST:
-			// Enviar como respuesta 404 Not Found
+			// Enviar como respuesta 400 Not Found
 			mensajeDeError(400, socket_fd);
 			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
@@ -132,20 +132,18 @@ int directorioIlegal(char * directorio){
 
 // Devuelve 1 si es POST y 2 si es GET
 int comprobarMetodo(char * metodo){
-	if((strcmp(metodo, "GET") != 0) && (strcmp(metodo, "POST") != 0)){
-		fprintf(stderr, "El metodo solicitado %s es distinto de GET y POST\n", metodo);
+	if(metodo == NULL)
+		return -2;
+	if((strcmp(metodo, "GET") != 0) && (strcmp(metodo, "POST") != 0))
 		return -1;
-	}
 	if(strcmp(metodo, "POST") == 0)
 		return 1;
 	return 2;
 }
 
 int protocoloValido(char * protocolo){
-	if(strcmp(protocolo, "HTTP/1.1")){
-		fprintf(stderr, "El protocolo %s solicitado es distinto de HTTP/1.1\n", protocolo);
+	if(protocolo == NULL || strcmp(protocolo, "HTTP/1.1"))
 		return 1;
-	}
 	return 0;
 }
 
@@ -196,7 +194,7 @@ void process_web_request(int descriptorFichero)
 
 	int tipoMetodo;
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
-		debug(ERROR, "Metodo no soportado", metodo, descriptorFichero);
+		debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
 		break;
 	}
 
@@ -260,7 +258,7 @@ void process_web_request(int descriptorFichero)
 	
 
 	if(protocoloValido(protocolo) != 0){
-		debug(ERROR, "Protocolo solicitado no válido.", protocolo, descriptorFichero);
+		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
 		break;
 	}
 	
@@ -276,13 +274,13 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	nExtension = getFileType(extension);/* < 0){
+	if(nExtension = getFileType(extension)< 0){
 		switch(nExtension){
 			case -1 :
-				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
+				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
 				break;
 			case -2 :
-				debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
+				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
 				break;
 		}
 		break;
