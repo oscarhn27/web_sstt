@@ -239,7 +239,7 @@ void process_web_request(int descriptorFichero)
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
 	if(nExtension = getFileType(extension) < 0){
-		switch(nExtension){
+		/*switch(nExtension){
 			case -1 : 
 				debug(ERROR, "Archivo sin extension solicitado",path,descriptorFichero);
 				break;
@@ -247,7 +247,7 @@ void process_web_request(int descriptorFichero)
 				debug(ERROR, "Archivo con extension no soportado", extension, descriptorFichero);
 				break;
 		}
-		break;
+		break;*/
 	}
 	
 	/*
