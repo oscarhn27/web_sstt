@@ -264,7 +264,8 @@ void process_web_request(int descriptorFichero)
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
 	printf("Path: %s\n", path);
 	char * extension = strrchr(path + 1, '.') + 1;
-	printf("Extension: %s\n", extension);
+	if(extension != NULL)
+		printf("Extension: %s\n", extension);
 	int nExtension; // Numero de la extension
 	if((nExtension = getFileType(extension)) < 0){
 		switch(nExtension){
@@ -286,6 +287,7 @@ void process_web_request(int descriptorFichero)
 	printf("Path: %s\n", path);
 	struct stat fich2;
 	stat(path, &fich2);
+	printf("Pasa el segundo stat\n");
 	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
 
 	fflush(stdout);
