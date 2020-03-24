@@ -50,7 +50,7 @@ struct {
 	{0,0} };
 
 int getFileType(char * ext){
-	int nExtension, i;
+	int i;
 	if(ext == NULL){
 		return -1;
 	}
@@ -265,7 +265,7 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	if(nExtension = getFileType(extension) < 0){
+	if((nExtension = getFileType(extension)) < 0){
 		switch(nExtension){
 			case -1 :
 				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
