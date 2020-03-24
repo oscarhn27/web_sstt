@@ -282,7 +282,7 @@ void process_web_request(int descriptorFichero)
 	
 
 	path = path + 1;
-	// char ok[1000] = "HTTP/1.1 200 OK\r\n";
+	stat(path, &fich);
 	sendHeaders(state, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
 
 	fflush(stdout);
