@@ -282,8 +282,9 @@ void process_web_request(int descriptorFichero)
 	
 
 	path = path + 1;
-	stat(path, &fich);
-	sendHeaders(state, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
+	struct stat fich2;
+	stat(path, &fich2);
+	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
 
 	fflush(stdout);
 
