@@ -124,7 +124,7 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 		(void)write(fd,"\n",1);
 		(void)close(fd);
 	}
-	if(log_message_type == ERROR || log_message_type == NOENCONTRADO || log_message_type == PROHIBIDO) exit(3);
+	if(log_message_type == ERROR || log_message_type == NOENCONTRADO || log_message_type == PROHIBIDO);// exit(3);
 }
 
 int directorioIlegal(char * directorio){
@@ -251,7 +251,6 @@ void process_web_request(int descriptorFichero)
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
 		status = generarError(path, state, PROHIBIDO);
 	}
-	printf("Sale del if\n");
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
@@ -263,8 +262,8 @@ void process_web_request(int descriptorFichero)
 
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
-	printf("Llega aqui -----------------------------------\n");
-	char * extension = strrchr(path, '.') + 1;
+	printf("Path: %s\n", path);
+	char * extension = strrchr(path + 1, '.') + 1;
 	printf("Extension: %s\n", extension);
 	int nExtension; // Numero de la extension
 	if((nExtension = getFileType(extension)) < 0){
