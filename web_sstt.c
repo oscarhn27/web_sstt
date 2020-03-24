@@ -244,6 +244,7 @@ void process_web_request(int descriptorFichero)
 	exist = stat(path + 1, &fich);
 	if(status && exist == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
+		printf("Antes del generar error\n");
 		status = generarError(path, state, NOENCONTRADO);
 	}
 	else if(status && directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
