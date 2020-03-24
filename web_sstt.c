@@ -265,7 +265,7 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	if(status && (nExtension = getFileType(extension) < 0)){
+	if(nExtension = getFileType(extension) < 0){
 		switch(nExtension){
 			case -1 :
 				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
@@ -274,7 +274,6 @@ void process_web_request(int descriptorFichero)
 				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
 				status = generarError(path, state, BADREQUEST);
 		}
-		break;
 	}
 	/*
 		En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
