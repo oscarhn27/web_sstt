@@ -254,23 +254,14 @@ void process_web_request(int descriptorFichero)
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
-	
-	
 
 	if(protocoloValido(protocolo) != 0){
 		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
 		break;
 	}
-	
-	/*
-	//	Como se trata el caso excepcional de la URL que no apunta a ningún fichero
-	//	html
-	//
 
-	//
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
-	*/
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
@@ -294,7 +285,7 @@ void process_web_request(int descriptorFichero)
 	char ok[1000] = "HTTP/1.1 200 OK\r\n";
 	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
 
-fflush(stdout);
+	fflush(stdout);
 
 	char fileSend [BUFSIZE];
 	int fd_file = open(path, O_RDONLY);
