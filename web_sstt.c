@@ -78,7 +78,7 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
 	char headers[8000];
-	sprintf(headers, "%s%s%s%s\r\n", msgType, date, cType, cLength);
+	sprintf(headers, "%s\r\n%s%s%s\r\n", msgType, date, cType, cLength);
 	write(socket_fd, headers, strlen(headers));
 }
 
