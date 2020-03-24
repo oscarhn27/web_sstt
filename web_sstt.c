@@ -21,6 +21,17 @@
 #define PROHIBIDO		403
 #define NOENCONTRADO	404
 #define SPECIAL_CHAR	'$'
+#define HTML_400		"/error-400.html"
+#define HTML_403		"/error-403.html"
+#define HTML_404		"/error-404.html"
+#define HTML_MALO		"/malo.html"
+#define HTML_BUENO		"/bueno.html"
+#define FALSE			0
+#define TRUE			1
+#define STATE_OK		"HTTP/1.1 200 OK"
+#define STATE_BADREQUEST "HTTP/1.1 400 BADREQUEST"
+#define STATE_FORBIDDEN	"HTTP/1.1 403 FORBIDDEN"
+#define STATE_NOTFOUND	"HTTP/1.1 404 NOTFOUND"
 
 struct {
 	char *ext;
@@ -71,23 +82,22 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	write(socket_fd, headers, strlen(headers));
 }
 
-void mensajeDeError(int code_error, int socket_fd){
-
-	char * msg;
-	switch(code_error){
-		case 400:
-			msg = "HTTP/1.1 400 Bad request\r\n\r\n";
+int generarError(char * path,char * state, int code){
+	switch(code){
+		case BADREQUEST: 
+			path = HTML_400;
+			state = STATE_BADREQUEST;
 			break;
-		case 403:
-			msg = "HTTP/1.1 403 Forbidden\r\n\r\n";
+		case PROHIBIDO:
+			path = HTML_403;
+			state = STATE_FORBIDDEN;
 			break;
-		case 404:
-			msg = "HTTP/1.1 404 Not Found\r\n\r\n";
-			break;
-		default:
-			return;
-	} 
-	write(socket_fd, msg, strlen(msg));
+		case NOENCONTRADO:
+			path = HTML_404;
+			state = STATE_NOTFOUND;
+			break;	
+	}
+	return FALSE;
 }
 
 void debug(int log_message_type, char *message, char *additional_info, int socket_fd)
@@ -99,18 +109,12 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 		case ERROR: (void)sprintf(logbuffer,"ERROR: %s:%s Errno=%d exiting pid=%d",message, additional_info, errno,getpid());
 			break;
 		case PROHIBIDO:
-			// Enviar como respuesta 403 Forbidden
-			mensajeDeError(403, socket_fd);
 			(void)sprintf(logbuffer,"FORBIDDEN: %s:%s",message, additional_info);
 			break;
 		case NOENCONTRADO:
-			// Enviar como respuesta 404 Not Found
-			mensajeDeError(404, socket_fd);
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
 		case BADREQUEST:
-			// Enviar como respuesta 400 Not Found
-			mensajeDeError(400, socket_fd);
 			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
 	}
@@ -163,8 +167,9 @@ void process_web_request(int descriptorFichero)
 	// Definir buffer y variables necesarias para leer las peticiones
 	//
 	char buf[BUFSIZE];
-	char * token;
-	char * subtoken;
+	int status = TRUE; // FALSE ERROR, TRUE OK
+	char * state = STATE_OK;
+
 	//
 	// Leer la petición HTTP y comprobación de errores de lectura
 	//
@@ -189,34 +194,32 @@ void process_web_request(int descriptorFichero)
 	//	TRATAR LOS CASOS DE LOS DIFERENTES METODOS QUE SE USAN
 	//
 	
-	// token = strtok(buf, "$$");
 	char * metodo = strtok(buf, " ");
+	char * path = strtok(NULL, " ");
+	char * protocolo = strtok(NULL, "$");
 
 	int tipoMetodo;
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
 		debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
-		break;
+		status = generarError(path, state, BADREQUEST);
 	}
-
-	char * path = strtok(NULL, " ");
-	char * protocolo = strtok(NULL, "$");
 
 	char * lineaHeader;
 	char lineaB[1000];
-	while((lineaHeader = strtok(NULL, "$")) != NULL){
+	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
 		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "mail=") == NULL){
 			debug(BADREQUEST, "Peticion mal formada", lineaHeader, descriptorFichero);
-			exit(EXIT_FAILURE);
+			status = generarError(path, state, BADREQUEST);
 		}
 		strcpy(lineaB, lineaHeader);
 	}
-	if(tipoMetodo == 1){
+	if(status && tipoMetodo == 1){
 		strtok(lineaB, "=");
 		char * mail = strtok(NULL, "$");
 		if(strcmp(mail, "oscar.hernandezn%40um.es") != 0)
-			path = "/malo.html";
+			path = HTML_MALO;
 		else
-			path = "/bueno.html";
+			path = HTML_BUENO;
 	}
 
 
@@ -233,31 +236,28 @@ void process_web_request(int descriptorFichero)
 	struct stat fich; // Información del fichero
 	int exist; // Si es igual a -1 el fichero no existe
 	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
-	if(path[strlen(path)-1]=='/'){
+	if(status && path[strlen(path)-1]=='/'){
 		char pathCompleto[64];
 		sprintf(pathCompleto, "%sindex.html", path);
 		path = pathCompleto;
 	}
-	path = path + 1;
-	exist = stat(path, &fich);
-	if(exist == -1){
+	exist = stat(path + 1, &fich);
+	if(status && exist == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
-		printf("Error el fichero %s no existe\n", path);
-		break;
+		status = generarError(path, state, NOENCONTRADO);
 	}
-	else if(directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+	else if(status && directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
-		printf("Error el fichero solicitado %s no tiene permisos para get\n", path);
-		break;
+		status = generarError(path, state, PROHIBIDO);
 	}
 	
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
 
-	if(protocoloValido(protocolo) != 0){
+	if(status && protocoloValido(protocolo) != 0){
 		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
-		break;
+		status = generarError(path, state, BADREQUEST);
 	}
 
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
@@ -265,14 +265,14 @@ void process_web_request(int descriptorFichero)
 	
 	char * extension = strrchr(path, '.') + 1;
 	int nExtension; // Numero de la extension
-	if(nExtension = getFileType(extension)< 0){
+	if(status && (nExtension = getFileType(extension) < 0)){
 		switch(nExtension){
 			case -1 :
 				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
-				break;
+				status = generarError(path, state, BADREQUEST);
 			case -2 :
 				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
-				break;
+				status = generarError(path, state, BADREQUEST);
 		}
 		break;
 	}
@@ -282,8 +282,9 @@ void process_web_request(int descriptorFichero)
 	*/
 	
 
-	char ok[1000] = "HTTP/1.1 200 OK\r\n";
-	sendHeaders(ok, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
+	path = path + 1;
+	// char ok[1000] = "HTTP/1.1 200 OK\r\n";
+	sendHeaders(state, extensions[nExtension].filetype, fich.st_size, descriptorFichero);
 
 	fflush(stdout);
 
