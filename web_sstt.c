@@ -162,7 +162,7 @@ void process_web_request(int descriptorFichero)
 	struct timeval timeWait;
 	timeWait.tv_sec = 5;
 	timeWait.tv_usec = 0;
-	do{
+	while(select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait)){
 
 	debug(LOG,"request","Ha llegado una peticion",descriptorFichero);
 	//
@@ -310,7 +310,7 @@ void process_web_request(int descriptorFichero)
 	}while(bytes_r != 0);
 	close(fd_file);
 
-	}while(select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait));
+	}
 	close(descriptorFichero);
 	exit(1);
 }
