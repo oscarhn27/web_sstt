@@ -82,19 +82,19 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	write(socket_fd, headers, strlen(headers));
 }
 
-int generarError(char * path,char * state, int code){
+int generarError(char ** path,char ** state, int code){
 	switch(code){
 		case BADREQUEST: 
-			path = HTML_400;
-			state = STATE_BADREQUEST;
+			*path = HTML_400;
+			*state = STATE_BADREQUEST;
 			break;
 		case PROHIBIDO:
-			path = HTML_403;
-			state = STATE_FORBIDDEN;
+			*path = HTML_403;
+			*state = STATE_FORBIDDEN;
 			break;
 		case NOENCONTRADO:
-			path = HTML_404;
-			state = STATE_NOTFOUND;
+			*path = HTML_404;
+			*state = STATE_NOTFOUND;
 			break;	
 	}
 	return FALSE;
@@ -201,7 +201,8 @@ void process_web_request(int descriptorFichero)
 	int tipoMetodo;
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
 		debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
-		status = generarError(path, state, BADREQUEST);
+		status = generarError(&path, &state, BADREQUEST);
+		printf("Metodo no soportado %s, -> path: %s, state: %s\n", metodo, path, state);
 	}
 
 	char * lineaHeader;
@@ -209,7 +210,7 @@ void process_web_request(int descriptorFichero)
 	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
 		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "mail=") == NULL){
 			debug(BADREQUEST, "Peticion mal formada", lineaHeader, descriptorFichero);
-			status = generarError(path, state, BADREQUEST);
+			status = generarError(&path, &state, BADREQUEST);
 		}
 		strcpy(lineaB, lineaHeader);
 	}
@@ -245,11 +246,11 @@ void process_web_request(int descriptorFichero)
 	if(status && exist == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
 		printf("Antes del generar error\n");
-		status = generarError(path, state, NOENCONTRADO);
+		status = generarError(&path, &state, NOENCONTRADO);
 	}
 	else if(status && directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
-		status = generarError(path, state, PROHIBIDO);
+		status = generarError(&path, &state, PROHIBIDO);
 	}
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
@@ -257,7 +258,7 @@ void process_web_request(int descriptorFichero)
 
 	if(status && protocoloValido(protocolo) != 0){
 		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
-		status = generarError(path, state, BADREQUEST);
+		status = generarError(&path, &state, BADREQUEST);
 	}
 
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
@@ -271,10 +272,10 @@ void process_web_request(int descriptorFichero)
 		switch(nExtension){
 			case -1 :
 				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
-				status = generarError(path, state, BADREQUEST);
+				status = generarError(&path, &state, BADREQUEST);
 			case -2 :
 				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
-				status = generarError(path, state, BADREQUEST);
+				status = generarError(&path, &state, BADREQUEST);
 		}
 	}
 	/*
