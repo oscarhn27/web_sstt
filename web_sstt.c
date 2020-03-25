@@ -73,12 +73,14 @@ void obtenerHeaderDate(char * date){
 void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	char date[1000];
 	obtenerHeaderDate(date);
+	char server[1000];
+	sprintf(server, "Server: 16.04.1 LTS\r\n");
 	char cType[1000];
 	sprintf(cType, "Content-type: %s\r\n", fileType);
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
-	char headers[8000];
-	sprintf(headers, "%s\r\n%s%s%s\r\n", msgType, date, cType, cLength);
+	char headers[BUFSIZE];
+	sprintf(headers, "%s\r\n%s%s%s%s\r\n", msgType, server, date, cType, cLength);
 	write(socket_fd, headers, strlen(headers));
 }
 
@@ -208,7 +210,7 @@ void process_web_request(int descriptorFichero)
 	char * lineaHeader;
 	char lineaB[1000];
 	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
-		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "mail=") == NULL){
+		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "email=") == NULL){
 			debug(BADREQUEST, "Peticion mal formada", lineaHeader, descriptorFichero);
 			status = generarError(&path, &state, BADREQUEST);
 		}
@@ -224,31 +226,29 @@ void process_web_request(int descriptorFichero)
 	}
 
 
-
-	
-	
 	//
 	//	Como se trata el caso de acceso ilegal a directorios superiores de la
 	//	jerarquia de directorios
 	//	del sistema
 	//
-	
-	
-	struct stat fich; // Información del fichero
-	int exist; // Si es igual a -1 el fichero no existe
+
+	if(status && (directorioIlegal(path))){
+		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
+		status = generarError(&path, &state, BADREQUEST);
+	}
 	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
 	if(status && path[strlen(path)-1]=='/'){
 		char pathCompleto[64];
 		sprintf(pathCompleto, "%sindex.html", path);
 		path = pathCompleto;
 	}
-	exist = stat(path + 1, &fich);
-	if(status && exist == -1){
+	struct stat fich; // Información del fichero
+	if(status && stat(path + 1, &fich) == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
 		printf("Antes del generar error\n");
 		status = generarError(&path, &state, NOENCONTRADO);
 	}
-	else if(status && directorioIlegal(path) || fich.st_uid != 1001){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+	else if(status && (directorioIlegal(path) || fich.st_uid != 1001)){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
 		status = generarError(&path, &state, PROHIBIDO);
 	}
