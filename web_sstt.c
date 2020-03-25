@@ -83,7 +83,7 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
 	char headers[BUFSIZE];
-	sprintf(headers, "%s\r\n%s%s%s%s\r\n", msgType, server, date, cType, cLength);
+	sprintf(headers, "%s\r\n%s%s%s%s\r\n", msgType, server, date, cLength, cType);
 	write(socket_fd, headers, strlen(headers));
 }
 
@@ -120,7 +120,8 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
 		case BADREQUEST:
-			(void)sprintf(logbuffer,"BAD REQUEST: %s:'%s'",message, additional_info);
+			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
+			break;
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
 	}
 
@@ -129,7 +130,7 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 		(void)write(fd,"\n",1);
 		(void)close(fd);
 	}
-	if(log_message_type == ERROR || log_message_type == NOENCONTRADO || log_message_type == PROHIBIDO);// exit(3);
+	// if(log_message_type == ERROR || log_message_type == NOENCONTRADO || log_message_type == PROHIBIDO);// exit(3);
 }
 
 int directorioIlegal(char * directorio){
@@ -209,10 +210,7 @@ void process_web_request(int descriptorFichero)
 	char * path = strtok(NULL, " ");
 	char * protocolo = strtok(NULL, "$");
 // --------------------------------------------------------
-	printf("Path entrante:'%s'\n", path);
-
-	// Volvemos a consumir la primera linea de buf
-	strtok(buf, "$");
+	// printf("Path entrante:'%s'\n", path);
 
 	// Casos de error en el método (Debe ser GET o POST)
 
@@ -258,7 +256,7 @@ void process_web_request(int descriptorFichero)
 
 	int protocoloV;
 	if(status && (protocoloV = protocoloValido(protocolo)) < 0){
-		switch(tipoMetodo){
+		switch(protocoloV){
 			case -1:
 				debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
 				break;
@@ -306,7 +304,7 @@ void process_web_request(int descriptorFichero)
 			status = generarError(&path, &state, BADREQUEST);
 		}
 // ----------------------------------------------------------------------------
-		printf("Header entrante:'%s'\n", lineaHeader);
+		// printf("Header entrante:'%s'\n", lineaHeader);
 		// Copiamos la ultima linea leida para que en lineaB se almacene el entity body al salir.
 		strcpy(lineaB, lineaHeader);
 	}
@@ -355,7 +353,7 @@ void process_web_request(int descriptorFichero)
 
 	path = path + 1;
 // ------------------------------------------------------------------------
-	printf("Path saliente: '%s'\n\n", path);
+	// printf("Path saliente: '%s'\n\n", path);
 	struct stat fich2;
 	stat(path, &fich2);
 	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
@@ -366,7 +364,6 @@ void process_web_request(int descriptorFichero)
 	do{
 		bytes_r = 0;
 		bytes_r = read(fd_file, fileSend, BUFSIZE);
-		// printf("Bytes leidos %lu\n", bytes_r);
 		int offset = 0;
 		while((offset += write(descriptorFichero, fileSend+offset, bytes_r-offset)) != bytes_r ){
 			if(offset < 0){
