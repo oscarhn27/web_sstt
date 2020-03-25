@@ -32,21 +32,24 @@
 #define STATE_BADREQUEST "HTTP/1.1 400 BADREQUEST"
 #define STATE_FORBIDDEN	"HTTP/1.1 403 FORBIDDEN"
 #define STATE_NOTFOUND	"HTTP/1.1 404 NOTFOUND"
+#define POST_TYPE		1
+#define GET_TYPE		2
+#define EXTENSION_HTML  9
 
 struct {
 	char *ext;
 	char *filetype;
 } extensions [] = {
-	{"gif", "image/gif" },
-	{"jpg", "image/jpg" },
-	{"jpeg","image/jpeg"},
-	{"png", "image/png" },
-	{"ico", "image/ico" },
-	{"zip", "image/zip" },
-	{"gz",  "image/gz"  },
-	{"tar", "image/tar" },
-	{"htm", "text/html" },
-	{"html","text/html" },
+	{"gif", "image/gif" },  // 0
+	{"jpg", "image/jpg" },  // 1
+	{"jpeg","image/jpeg"},  // 2
+	{"png", "image/png" },  // 3
+	{"ico", "image/ico" },  // 4
+	{"zip", "image/zip" },  // 5
+	{"gz",  "image/gz"  },  // 6
+	{"tar", "image/tar" },  // 7
+	{"htm", "text/html" },  // 8
+	{"html","text/html" },  // 9
 	{0,0} };
 
 int getFileType(char * ext){
@@ -130,9 +133,11 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 }
 
 int directorioIlegal(char * directorio){
+	if (directorio == NULL)
+		return -2;
 	for(int i = 0; i < strlen(directorio)-1; i++)
 		if(directorio[i] == '.' && directorio[i+1] == '.')
-			return 1;
+			return -1;
 	return 0;
 }
 
@@ -143,13 +148,15 @@ int comprobarMetodo(char * metodo){
 	if((strcmp(metodo, "GET") != 0) && (strcmp(metodo, "POST") != 0))
 		return -1;
 	if(strcmp(metodo, "POST") == 0)
-		return 1;
-	return 2;
+		return POST_TYPE;
+	return GET_TYPE;
 }
 
 int protocoloValido(char * protocolo){
-	if(protocolo == NULL || strcmp(protocolo, "HTTP/1.1"))
-		return 1;
+	if(protocolo == NULL)
+		return -2;
+	if(strcmp(protocolo, "HTTP/1.1"))
+		return -1;
 	return 0;
 }
 
@@ -200,74 +207,125 @@ void process_web_request(int descriptorFichero)
 	char * path = strtok(NULL, " ");
 	char * protocolo = strtok(NULL, "$");
 
+	// Casos de error en el método (Debe ser GET o POST)
+
 	int tipoMetodo;
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
-		debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
-		status = generarError(&path, &state, BADREQUEST);
-		printf("Metodo no soportado %s, -> path: %s, state: %s\n", metodo, path, state);
-	}
-
-	char * lineaHeader;
-	char lineaB[1000];
-	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
-		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "email=") == NULL){
-			debug(BADREQUEST, "Peticion mal formada", lineaHeader, descriptorFichero);
-			status = generarError(&path, &state, BADREQUEST);
+		switch(tipoMetodo){
+			case -1:
+				debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
+				break;
+			case -2:
+				debug(BADREQUEST, "No se encontro el metodo", "NULL", descriptorFichero);
+				break;
 		}
-		strcpy(lineaB, lineaHeader);
-		printf("Linea:'%s'\n", lineaB);
-	}
-	if(status && tipoMetodo == 1){
-		strtok(lineaB, "=");
-		char * mail = strtok(NULL, "$");
-		if(strcmp(mail, "oscar.hernandezn%40um.es") != 0)
-			path = HTML_MALO;
-		else
-			path = HTML_BUENO;
-	}
-
-
-	//
-	//	Como se trata el caso de acceso ilegal a directorios superiores de la
-	//	jerarquia de directorios
-	//	del sistema
-	//
-
-	if(status && (directorioIlegal(path))){
-		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
 		status = generarError(&path, &state, BADREQUEST);
 	}
-	// Si el archivo especificado es un directorio añadimos index.html como peticion por defecto
-	if(status && path[strlen(path)-1]=='/'){
+
+
+	//
+	//	Caso de acceso ilegal a directorios superiores de la
+	//	jerarquia de directorios del sistema
+	//	
+
+	int directorioError;
+	if(status && (directorioError = directorioIlegal(path))){
+		int codeERROR;
+		switch(directorioError){
+			case -1:
+				debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
+				codeERROR = PROHIBIDO;
+				break;
+			case -2:
+				debug(BADREQUEST, "No se encontro la ruta del archivo", "NULL", descriptorFichero);
+				codeERROR = BADREQUEST;
+				break;
+		}
+		status = generarError(&path, &state, codeERROR);
+	}
+
+	// Si el archivo especificado es un directorio añadimos index.html a la ruta como peticion por defecto
+
+	if(path[strlen(path)-1]=='/'){
 		char pathCompleto[64];
 		sprintf(pathCompleto, "%sindex.html", path);
 		path = pathCompleto;
 	}
+
+	// Comprobacion de que el fichero existe. El resultado de stat debe ser diferente de -1.
 	struct stat fich; // Información del fichero
+
 	if(status && stat(path + 1, &fich) == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
-		printf("Antes del generar error\n");
 		status = generarError(&path, &state, NOENCONTRADO);
 	}
-	else if(status && (directorioIlegal(path) || fich.st_uid != 1001)){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+
+	// Comprobacion de que el fichero solicitado tiene como propietario un usuario especial con uid = 1001
+
+	else if(status && (fich.st_uid != 1001)){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
 		status = generarError(&path, &state, PROHIBIDO);
 	}
+
+
+
 	//
 	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
 	//
 
-	if(status && protocoloValido(protocolo) != 0){
-		debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
+	int protocoloV;
+	if(status && (protocoloV = protocoloValido(protocolo)) < 0){
+		switch(tipoMetodo){
+			case -1:
+				debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
+				break;
+			case -2:
+				debug(BADREQUEST, "No se encontro el protocolo", "NULL", descriptorFichero);
+				break;
+		}
 		status = generarError(&path, &state, BADREQUEST);
+	}
+
+	// Control de errores en las cabeceras
+
+	char * lineaHeader;
+	char lineaB[1000];
+	// Recorremos todas las cabeceras con strtok. La ultima no sera una cabecera si no el entity body.
+	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
+		// Si una de estas lineas no contiene ': ' o 'email=' (Entity body) sera una cabecera mal formada
+		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "email=") == NULL){
+			debug(BADREQUEST, "Cabecera mal formada", lineaHeader, descriptorFichero);
+			status = generarError(&path, &state, BADREQUEST);
+		}
+		// Copiamos la ultima linea leida para que en lineaB se almacene el entity body al salir.
+		strcpy(lineaB, lineaHeader);
+	}
+
+	// Si la solicitud es de tipo POST se hacen las siguientes comprobaciones
+
+	if(status && tipoMetodo == POST_TYPE){
+		strtok(lineaB, "=");
+		char * mail = strtok(NULL, "$");
+		// Si la ruta solicitada no es igual a accion_form.html se devuelve un error
+		if(strcmp(path, "/accion_form.html") != 0){
+			debug(BADREQUEST, "Archivo solicitado incorrecto (POST)", path, descriptorFichero);
+			status = generarError(&path, &state, BADREQUEST);
+		}
+		else if(mail == NULL)
+			path = HTML_MALO;
+		else{
+			if(strcmp(mail, "oscar.hernandezn%40um.es") != 0)
+				path = HTML_MALO;
+			else
+				path = HTML_BUENO;
+		}
 	}
 
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
+
 	printf("Path: %s\n", path);
 	char * extension = strrchr(path + 1, '.') + 1;
-	if(extension != NULL)
-		printf("Extension: %s\n", extension);
 	int nExtension; // Numero de la extension
 	if((nExtension = getFileType(extension)) < 0){
 		switch(nExtension){
@@ -278,21 +336,18 @@ void process_web_request(int descriptorFichero)
 				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
 				status = generarError(&path, &state, BADREQUEST);
 		}
+		nExtension = EXTENSION_HTML;
 	}
-	/*
-		En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
-		correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
-	*/
 	
+	//
+	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
+	//	correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
+	// ******************* ENVIO DEL FICHERO ********************
 
 	path = path + 1;
-	printf("Path: %s\n", path);
 	struct stat fich2;
 	stat(path, &fich2);
-	printf("Pasa el segundo stat\n");
 	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
-
-	fflush(stdout);
 
 	char fileSend [BUFSIZE];
 	int fd_file = open(path, O_RDONLY);
