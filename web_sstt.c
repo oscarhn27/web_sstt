@@ -205,12 +205,14 @@ void process_web_request(int descriptorFichero)
 	//
 	//	TRATAR LOS CASOS DE LOS DIFERENTES METODOS QUE SE USAN
 	//
-	
 	char * metodo = strtok(buf, " ");
 	char * path = strtok(NULL, " ");
 	char * protocolo = strtok(NULL, "$");
 // --------------------------------------------------------
 	printf("Path entrante:'%s'\n", path);
+
+	// Volvemos a consumir la primera linea de buf
+	strtok(buf, "$");
 
 	// Casos de error en el método (Debe ser GET o POST)
 
@@ -249,6 +251,24 @@ void process_web_request(int descriptorFichero)
 		status = generarError(&path, &state, codeERROR);
 	}
 
+
+	//
+	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
+	//
+
+	int protocoloV;
+	if(status && (protocoloV = protocoloValido(protocolo)) < 0){
+		switch(tipoMetodo){
+			case -1:
+				debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
+				break;
+			case -2:
+				debug(BADREQUEST, "No se encontro el protocolo", "NULL", descriptorFichero);
+				break;
+		}
+		status = generarError(&path, &state, BADREQUEST);
+	}
+
 	// Si el archivo especificado es un directorio añadimos index.html a la ruta como peticion por defecto
 
 	if(path[strlen(path)-1]=='/'){
@@ -273,23 +293,6 @@ void process_web_request(int descriptorFichero)
 	}
 
 
-
-	//
-	// Incluyo el caso de que se introduzca un protocolo distinto a HTTP/1.1
-	//
-
-	int protocoloV;
-	if(status && (protocoloV = protocoloValido(protocolo)) < 0){
-		switch(tipoMetodo){
-			case -1:
-				debug(BADREQUEST, "Protocolo solicitado no válido", protocolo, descriptorFichero);
-				break;
-			case -2:
-				debug(BADREQUEST, "No se encontro el protocolo", "NULL", descriptorFichero);
-				break;
-		}
-		status = generarError(&path, &state, BADREQUEST);
-	}
 
 	// Control de errores en las cabeceras
 
