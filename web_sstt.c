@@ -117,7 +117,7 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			(void)sprintf(logbuffer,"NOT FOUND: %s:%s",message, additional_info);
 			break;
 		case BADREQUEST:
-			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
+			(void)sprintf(logbuffer,"BAD REQUEST: %s:'%s'",message, additional_info);
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
 	}
 
@@ -215,6 +215,7 @@ void process_web_request(int descriptorFichero)
 			status = generarError(&path, &state, BADREQUEST);
 		}
 		strcpy(lineaB, lineaHeader);
+		printf("Linea:'%s'\n", lineaB);
 	}
 	if(status && tipoMetodo == 1){
 		strtok(lineaB, "=");
