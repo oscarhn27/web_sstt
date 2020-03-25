@@ -176,6 +176,9 @@ void process_web_request(int descriptorFichero)
 	// Definir buffer y variables necesarias para leer las peticiones
 	//
 	char buf[BUFSIZE];
+	for(int i = 0; i < BUFSIZE; i++){
+		buf[i] = 0;
+	}
 	int status = TRUE; // FALSE ERROR, TRUE OK
 	char * state = STATE_OK;
 
@@ -183,19 +186,19 @@ void process_web_request(int descriptorFichero)
 	// Leer la petición HTTP y comprobación de errores de lectura
 	//
 	
-	read(descriptorFichero, buf, BUFSIZE);
+	int leido = read(descriptorFichero, buf, BUFSIZE);
 	
 	//
 	// Si la lectura tiene datos válidos terminar el buffer con un \0
 	//
 	
-	buf[strlen(buf)] = '\0';
+	buf[leido] = '\0';
 	
 	//
 	// Se eliminan los caracteres de retorno de carro y nueva linea
 	//
 	
-	for(int i = 0; i < strlen(buf); i++){
+	for(int i = 0; i < leido; i++){
 		if(buf[i] == '\n' || buf[i] == '\r')
 			buf[i] = SPECIAL_CHAR;
 	}
@@ -206,6 +209,8 @@ void process_web_request(int descriptorFichero)
 	char * metodo = strtok(buf, " ");
 	char * path = strtok(NULL, " ");
 	char * protocolo = strtok(NULL, "$");
+// --------------------------------------------------------
+	printf("Path entrante:'%s'\n", path);
 
 	// Casos de error en el método (Debe ser GET o POST)
 
@@ -255,14 +260,14 @@ void process_web_request(int descriptorFichero)
 	// Comprobacion de que el fichero existe. El resultado de stat debe ser diferente de -1.
 	struct stat fich; // Información del fichero
 
-	if(status && stat(path + 1, &fich) == -1){
+	if(status && tipoMetodo == GET_TYPE && stat(path + 1, &fich) == -1){
 		debug(NOENCONTRADO, "El archivo solicitado no ha sido encontrado", path, descriptorFichero);
 		status = generarError(&path, &state, NOENCONTRADO);
 	}
 
 	// Comprobacion de que el fichero solicitado tiene como propietario un usuario especial con uid = 1001
 
-	else if(status && (fich.st_uid != 1001)){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
+	else if(status && tipoMetodo == GET_TYPE && (fich.st_uid != 1001)){ // El fichero solicitado debe ser propiedad del user cliente (UID) = 1001
 		debug(PROHIBIDO, "El archivo solicitado no está disponible para clientes", path, descriptorFichero);
 		status = generarError(&path, &state, PROHIBIDO);
 	}
@@ -297,6 +302,8 @@ void process_web_request(int descriptorFichero)
 			debug(BADREQUEST, "Cabecera mal formada", lineaHeader, descriptorFichero);
 			status = generarError(&path, &state, BADREQUEST);
 		}
+// ----------------------------------------------------------------------------
+		printf("Header entrante:'%s'\n", lineaHeader);
 		// Copiamos la ultima linea leida para que en lineaB se almacene el entity body al salir.
 		strcpy(lineaB, lineaHeader);
 	}
@@ -324,7 +331,6 @@ void process_web_request(int descriptorFichero)
 	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
 	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
 
-	printf("Path: %s\n", path);
 	char * extension = strrchr(path + 1, '.') + 1;
 	int nExtension; // Numero de la extension
 	if((nExtension = getFileType(extension)) < 0){
@@ -345,6 +351,8 @@ void process_web_request(int descriptorFichero)
 	// ******************* ENVIO DEL FICHERO ********************
 
 	path = path + 1;
+// ------------------------------------------------------------------------
+	printf("Path saliente: '%s'\n\n", path);
 	struct stat fich2;
 	stat(path, &fich2);
 	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
