@@ -29,9 +29,9 @@
 #define FALSE			0
 #define TRUE			1
 #define STATE_OK		"HTTP/1.1 200 OK"
-#define STATE_BADREQUEST "HTTP/1.1 400 BADREQUEST"
-#define STATE_FORBIDDEN	"HTTP/1.1 403 FORBIDDEN"
-#define STATE_NOTFOUND	"HTTP/1.1 404 NOTFOUND"
+#define STATE_BADREQUEST "HTTP/1.1 400 Bad Request"
+#define STATE_FORBIDDEN	"HTTP/1.1 403 Forbidden"
+#define STATE_NOTFOUND	"HTTP/1.1 404 Not Found"
 #define POST_TYPE		1
 #define GET_TYPE		2
 #define EXTENSION_HTML  9
@@ -353,6 +353,7 @@ void process_web_request(int descriptorFichero)
 	//
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 	//	correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
+
 	// ******************* ENVIO DEL FICHERO ********************
 
 	path = path + 1;
@@ -378,6 +379,12 @@ void process_web_request(int descriptorFichero)
 	}while(bytes_r != 0);
 	close(fd_file);
 
+	// ***** INICIALIZACION DE VARIABLES PARA PERSISTENCIA *****
+	FD_ZERO(&setFd);
+	FD_SET(descriptorFichero, &setFd);
+
+	timeWait.tv_sec = 5;
+	timeWait.tv_usec = 0;
 	}
 	close(descriptorFichero);
 	exit(1);
