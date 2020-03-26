@@ -82,8 +82,12 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	sprintf(cType, "Content-type: %s\r\n", fileType);
 	char cLength [1000];
 	sprintf(cLength,"Content-length: %ld\r\n", size);
+	char connection [1000];
+	sprintf(connection, "Connection: Keep-Alive\r\n");
+	char keep_alive [1000];
+	sprintf(keep_alive, "Keep-Alive: timeout=5, max=0\r\n");
 	char headers[BUFSIZE];
-	sprintf(headers, "%s\r\n%s%s%s%s\r\n", msgType, server, date, cLength, cType);
+	sprintf(headers, "%s\r\n%s%s%s%s%s%s\r\n", msgType, server, date, cLength, cType, connection, keep_alive);
 	write(socket_fd, headers, strlen(headers));
 }
 
