@@ -16,11 +16,11 @@
 #define VERSION			24
 #define BUFSIZE			8096
 #define ERROR			42
-#define LOG				44
+#define LOG			44
 #define BADREQUEST		400
 #define PROHIBIDO		403
-#define NOENCONTRADO	404
-#define SPECIAL_CHAR	'$'
+#define NOENCONTRADO		404
+#define SPECIAL_CHAR		'$'
 #define HTML_400		"/error-400.html"
 #define HTML_403		"/error-403.html"
 #define HTML_404		"/error-404.html"
@@ -29,12 +29,12 @@
 #define FALSE			0
 #define TRUE			1
 #define STATE_OK		"HTTP/1.1 200 OK"
-#define STATE_BADREQUEST "HTTP/1.1 400 Bad Request"
-#define STATE_FORBIDDEN	"HTTP/1.1 403 Forbidden"
-#define STATE_NOTFOUND	"HTTP/1.1 404 Not Found"
+#define STATE_BADREQUEST 	"HTTP/1.1 400 Bad Request"
+#define STATE_FORBIDDEN		"HTTP/1.1 403 Forbidden"
+#define STATE_NOTFOUND		"HTTP/1.1 404 Not Found"
 #define POST_TYPE		1
 #define GET_TYPE		2
-#define EXTENSION_HTML  9
+#define EXTENSION_HTML  	9
 
 struct {
 	char *ext;
@@ -73,7 +73,7 @@ void obtenerHeaderDate(char * date){
 	sprintf(date, "Date: %s\r\n", buf);
 }
 
-void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
+void sendHeaders(char * msgType, char * fileType, long int size, int persistencia, int socket_fd){
 	char date[1000];
 	obtenerHeaderDate(date);
 	char server[1000];
@@ -87,13 +87,23 @@ void sendHeaders(char * msgType, char * fileType, long int size, int socket_fd){
 	char keep_alive [1000];
 	sprintf(keep_alive, "Keep-Alive: timeout=5, max=0\r\n");
 	char headers[BUFSIZE];
-	sprintf(headers, "%s\r\n%s%s%s%s%s%s\r\n", msgType, server, date, cLength, cType, connection, keep_alive);
+	if(persistencia)
+		sprintf(headers, "%s\r\n%s%s%s%s%s%s\r\n", msgType, server, date, cLength, cType, connection, keep_alive);
+	else
+		sprintf(headers, "%s\r\n%s%s%s%s\r\n", msgType, server, date, cLength, cType);
 	write(socket_fd, headers, strlen(headers));
+}
+
+int connectionClose(char * lineaHeader){
+	if(strcmp(lineaHeader, "Connection: close") == 0)
+		return TRUE;
+	return FALSE;
+
 }
 
 int generarError(char ** path,char ** state, int code){
 	switch(code){
-		case BADREQUEST: 
+		case BADREQUEST:
 			*path = HTML_400;
 			*state = STATE_BADREQUEST;
 			break;
@@ -104,7 +114,7 @@ int generarError(char ** path,char ** state, int code){
 		case NOENCONTRADO:
 			*path = HTML_404;
 			*state = STATE_NOTFOUND;
-			break;	
+			break;
 	}
 	return FALSE;
 }
@@ -113,7 +123,7 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 {
 	int fd ;
 	char logbuffer[BUFSIZE*2];
-	
+
 	switch (log_message_type) {
 		case ERROR: (void)sprintf(logbuffer,"ERROR: %s:%s Errno=%d exiting pid=%d",message, additional_info, errno,getpid());
 			break;
@@ -186,23 +196,24 @@ void process_web_request(int descriptorFichero)
 	}
 	int status = TRUE; // FALSE ERROR, TRUE OK
 	char * state = STATE_OK;
+	int persistencia = TRUE;
 
 	//
 	// Leer la petición HTTP y comprobación de errores de lectura
 	//
-	
+
 	int leido = read(descriptorFichero, buf, BUFSIZE);
-	
+
 	//
 	// Si la lectura tiene datos válidos terminar el buffer con un \0
 	//
-	
+
 	buf[leido] = '\0';
-	
+
 	//
 	// Se eliminan los caracteres de retorno de carro y nueva linea
 	//
-	
+
 	for(int i = 0; i < leido; i++){
 		if(buf[i] == '\n' || buf[i] == '\r')
 			buf[i] = SPECIAL_CHAR;
@@ -235,7 +246,7 @@ void process_web_request(int descriptorFichero)
 	//
 	//	Caso de acceso ilegal a directorios superiores de la
 	//	jerarquia de directorios del sistema
-	//	
+	//
 
 	int directorioError;
 	if(status && (directorioError = directorioIlegal(path))){
@@ -302,6 +313,8 @@ void process_web_request(int descriptorFichero)
 	char lineaB[1000];
 	// Recorremos todas las cabeceras con strtok. La ultima no sera una cabecera si no el entity body.
 	while(status && (lineaHeader = strtok(NULL, "$")) != NULL){
+		if(persistencia && connectionClose(lineaHeader))
+			persistencia = FALSE;
 		// Si una de estas lineas no contiene ': ' o 'email=' (Entity body) sera una cabecera mal formada
 		if(strstr(lineaHeader, ": ") == NULL && strstr(lineaHeader, "email=") == NULL){
 			debug(BADREQUEST, "Cabecera mal formada", lineaHeader, descriptorFichero);
@@ -349,7 +362,7 @@ void process_web_request(int descriptorFichero)
 		}
 		nExtension = EXTENSION_HTML;
 	}
-	
+
 	//
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
 	//	correspondiente, y el envio del fichero se hace en bloques de un maximo de  8kB
@@ -361,7 +374,7 @@ void process_web_request(int descriptorFichero)
 	// printf("Path saliente: '%s'\n\n", path);
 	struct stat fich2;
 	stat(path, &fich2);
-	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, descriptorFichero);
+	sendHeaders(state, extensions[nExtension].filetype, fich2.st_size, persistencia, descriptorFichero);
 
 	char fileSend [BUFSIZE];
 	int fd_file = open(path, O_RDONLY);
@@ -383,6 +396,8 @@ void process_web_request(int descriptorFichero)
 	FD_ZERO(&setFd);
 	FD_SET(descriptorFichero, &setFd);
 
+	if(persistencia == FALSE)
+		timeWait.tv_sec = 0;
 	timeWait.tv_sec = 5;
 	timeWait.tv_usec = 0;
 	}
@@ -395,7 +410,7 @@ int main(int argc, char **argv) {
 	socklen_t length;
 	static struct sockaddr_in cli_addr;		// static = Inicializado con ceros
 	static struct sockaddr_in serv_addr;	// static = Inicializado con ceros
-	
+
 	//  Argumentos que se esperan:
 	//
 	//	argv[1]
@@ -412,7 +427,7 @@ int main(int argc, char **argv) {
 	//  permisos para ser usado
 	//
 
-	if(chdir(argv[2]) == -1){ 
+	if(chdir(argv[2]) == -1){
 		(void)printf("ERROR: No se puede cambiar de directorio %s\n",argv[2]);
 		exit(4);
 	}
@@ -422,29 +437,29 @@ int main(int argc, char **argv) {
 
 	(void)signal(SIGCHLD, SIG_IGN); // Ignoramos a los hijos
 	(void)signal(SIGHUP, SIG_IGN); // Ignoramos cuelgues
-	
+
 	debug(LOG,"web server starting...", argv[1] ,getpid());
-	
+
 	/* setup the network socket */
 	if((listenfd = socket(AF_INET, SOCK_STREAM,0)) <0)
 		debug(ERROR, "system call","socket",0);
-	
+
 	port = atoi(argv[1]);
-	
+
 	if(port < 0 || port >60000)
 		debug(ERROR,"Puerto invalido, prueba un puerto de 1 a 60000",argv[1],0);
-	
+
 	/*Se crea una estructura para la información IP y puerto donde escucha el servidor*/
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY); /*Escucha en cualquier IP disponible*/
 	serv_addr.sin_port = htons(port); /*... en el puerto port especificado como parámetro*/
-	
+
 	if(bind(listenfd, (struct sockaddr *)&serv_addr,sizeof(serv_addr)) <0)
 		debug(ERROR,"system call","bind",0);
-	
+
 	if( listen(listenfd,64) <0)
 		debug(ERROR,"system call","listen",0);
-	
+
 	while(1){
 		length = sizeof(cli_addr);
 		if((socketfd = accept(listenfd, (struct sockaddr *)&cli_addr, &length)) < 0)
