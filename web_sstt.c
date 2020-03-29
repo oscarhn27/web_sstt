@@ -17,21 +17,33 @@
 #define BUFSIZE			8096
 #define ERROR			42
 #define LOG			44
+#define SPECIAL_CHAR		'$'
+
 #define BADREQUEST		400
 #define PROHIBIDO		403
 #define NOENCONTRADO		404
-#define SPECIAL_CHAR		'$'
+#define UNSUPPORTED_EXT 	415
+#define NOT_IMPLEMENTED 	501
+
 #define HTML_400		"/error-400.html"
 #define HTML_403		"/error-403.html"
 #define HTML_404		"/error-404.html"
-#define HTML_MALO		"/malo.html"
-#define HTML_BUENO		"/bueno.html"
-#define FALSE			0
-#define TRUE			1
+#define HTML_415		"/error-415.html"
+#define HTML_501		"/error-501.html"
+
 #define STATE_OK		"HTTP/1.1 200 OK"
 #define STATE_BADREQUEST 	"HTTP/1.1 400 Bad Request"
 #define STATE_FORBIDDEN		"HTTP/1.1 403 Forbidden"
 #define STATE_NOTFOUND		"HTTP/1.1 404 Not Found"
+#define STATE_UNSUPPORTED_EXT	"HTTP/1.1 415 Unsupported Media Type"
+#define STATE_NOTIMPLEMENTED		"HTTP/1.1 501 Not Implemented"
+
+#define HTML_MALO		"/malo.html"
+#define HTML_BUENO		"/bueno.html"
+
+#define FALSE			0
+#define TRUE			1
+
 #define POST_TYPE		1
 #define GET_TYPE		2
 #define EXTENSION_HTML  	9
@@ -115,6 +127,12 @@ int generarError(char ** path,char ** state, int code){
 			*path = HTML_404;
 			*state = STATE_NOTFOUND;
 			break;
+		case UNSUPPORTED_EXT:
+			*path = HTML_415;
+			*state = STATE_UNSUPPORTED_EXT;
+		case NOT_IMPLEMENTED:
+			*path = HTML_501;
+			*state = STATE_NOTIMPLEMENTED;
 	}
 	return FALSE;
 }
@@ -135,6 +153,12 @@ void debug(int log_message_type, char *message, char *additional_info, int socke
 			break;
 		case BADREQUEST:
 			(void)sprintf(logbuffer,"BAD REQUEST: %s:%s",message, additional_info);
+			break;
+		case UNSUPPORTED_EXT:
+			(void)sprintf(logbuffer,"UNSUPPORTED MEDIA TYPE: %s:%s",message, additional_info);
+			break;
+		case NOT_IMPLEMENTED:
+			(void)sprintf(logbuffer,"NOT IMPLEMENTED: %s:%s",message, additional_info);
 			break;
 		case LOG: (void)sprintf(logbuffer," INFO: %s:%s:%d",message, additional_info, socket_fd); break;
 	}
@@ -233,13 +257,14 @@ void process_web_request(int descriptorFichero)
 	if((tipoMetodo = comprobarMetodo(metodo)) < 0){
 		switch(tipoMetodo){
 			case -1:
-				debug(BADREQUEST, "Metodo no soportado", metodo, descriptorFichero);
+				debug(NOT_IMPLEMENTED, "Metodo no soportado", metodo, descriptorFichero);
+				status = generarError(&path, &state, NOT_IMPLEMENTED);
 				break;
 			case -2:
 				debug(BADREQUEST, "No se encontro el metodo", "NULL", descriptorFichero);
+				status = generarError(&path, &state, BADREQUEST);
 				break;
 		}
-		status = generarError(&path, &state, BADREQUEST);
 	}
 
 
@@ -288,6 +313,29 @@ void process_web_request(int descriptorFichero)
 		char pathCompleto[64];
 		sprintf(pathCompleto, "%sindex.html", path);
 		path = pathCompleto;
+	}
+
+	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
+	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
+
+	char * extension = strrchr(path + 1, '.');
+	int nExtension; // indice en el array de la extension del archivo
+	if(extension == NULL){
+		debug(UNSUPPORTED_EXT, "Archivo sin extension solicitado", path, descriptorFichero);
+		status = generarError(&path, &state, UNSUPPORTED_EXT);
+		nExtension = EXTENSION_HTML;
+	}
+	else if((nExtension = getFileType(extension + 1)) < 0){
+		switch(nExtension){
+			case -1 :
+				debug(UNSUPPORTED_EXT, "Archivo sin extension solicitado", path, descriptorFichero);
+				break;
+			case -2 :
+				debug(UNSUPPORTED_EXT, "Archivo con extension no soportado", extension, descriptorFichero);
+				break;	
+		}
+		status = generarError(&path, &state, UNSUPPORTED_EXT);
+		nExtension = EXTENSION_HTML;
 	}
 
 	// Comprobacion de que el fichero existe. El resultado de stat debe ser diferente de -1.
@@ -346,22 +394,6 @@ void process_web_request(int descriptorFichero)
 		}
 	}
 
-	//	Evaluar el tipo de fichero que se está solicitando, y actuar en
-	//	consecuencia devolviendolo si se soporta u devolviendo el error correspondiente en otro caso
-
-	char * extension = strrchr(path + 1, '.') + 1;
-	int nExtension; // Numero de la extension
-	if((nExtension = getFileType(extension)) < 0){
-		switch(nExtension){
-			case -1 :
-				debug(BADREQUEST, "Archivo sin extension solicitado", path, descriptorFichero);
-				status = generarError(&path, &state, BADREQUEST);
-			case -2 :
-				debug(BADREQUEST, "Archivo con extension no soportado", extension, descriptorFichero);
-				status = generarError(&path, &state, BADREQUEST);
-		}
-		nExtension = EXTENSION_HTML;
-	}
 
 	//
 	//	En caso de que el fichero sea soportado, exista, etc. se envia el fichero con la cabecera
@@ -398,7 +430,8 @@ void process_web_request(int descriptorFichero)
 
 	if(persistencia == FALSE)
 		timeWait.tv_sec = 0;
-	timeWait.tv_sec = 5;
+	else
+		timeWait.tv_sec = 5;
 	timeWait.tv_usec = 0;
 	}
 	close(descriptorFichero);
