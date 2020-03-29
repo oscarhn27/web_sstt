@@ -208,7 +208,8 @@ void process_web_request(int descriptorFichero)
 	struct timeval timeWait;
 	timeWait.tv_sec = 5;
 	timeWait.tv_usec = 0;
-	while(select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait)){
+	int retval = select(descriptorFichero+1, &setFd, NULL, NULL, &timeWait) > 0;
+	while(retval){
 
 	debug(LOG,"request","Ha llegado una peticion",descriptorFichero);
 	//
@@ -425,6 +426,22 @@ void process_web_request(int descriptorFichero)
 	close(fd_file);
 
 	// ***** INICIALIZACION DE VARIABLES PARA PERSISTENCIA *****
+
+	if (persistencia) {
+		FD_ZERO(&setFd);
+		FD_SET(descriptorFichero, &setFd);
+		timeWait.tv_sec = 5;
+		timeWait.tv_usec = 0;
+
+		retval = select(descriptorFichero + 1, &setFd, NULL, NULL, &timeWait) > 0;
+		persistente = 1;
+	} else {
+		retval = 0;
+		persistente = 0;
+	}
+
+/*
+
 	FD_ZERO(&setFd);
 	FD_SET(descriptorFichero, &setFd);
 
@@ -432,7 +449,7 @@ void process_web_request(int descriptorFichero)
 		timeWait.tv_sec = 0;
 	else
 		timeWait.tv_sec = 5;
-	timeWait.tv_usec = 0;
+	timeWait.tv_usec = 0;*/
 	}
 	close(descriptorFichero);
 	exit(1);
