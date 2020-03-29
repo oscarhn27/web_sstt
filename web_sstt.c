@@ -434,10 +434,8 @@ void process_web_request(int descriptorFichero)
 		timeWait.tv_usec = 0;
 
 		retval = select(descriptorFichero + 1, &setFd, NULL, NULL, &timeWait) > 0;
-		persistente = 1;
 	} else {
 		retval = 0;
-		persistente = 0;
 	}
 
 /*
