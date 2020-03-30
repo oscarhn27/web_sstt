@@ -1,2 +1,5 @@
 # Specify filepatterns you want git to ignore.
 a.out
+mi.ip
+servidorHTTP/webserver.log
+web_sstt
